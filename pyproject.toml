@@ -46,6 +46,6 @@ version_toml = ["pyproject.toml:project.version"]
 version_variables = ["src/nexroo_cli/__init__.py:__version__"]
 build_command = "pip install build && python -m build"
 
-[tool.semantic_release.branches.prod]
-match = "prod"
+[tool.semantic_release.branches.main]
+match = "main"
 prerelease = false
