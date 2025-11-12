@@ -1,13 +1,6 @@
 # Nexroo CLI
 
-CLI wrapper for ai-rooms-script with Zitadel authentication for Synvex SaaS features.
-
-## Features
-
-- **Zitadel Authentication**: Secure OIDC PKCE flow for CLI authentication
-- **Token Management**: Encrypted local storage with 30-day offline grace period
-- **SaaS Integration**: Access Synvex backend features when authenticated
-- **Workflow Execution**: Run ai-rooms-script workflows with or without authentication
+CLI wrapper for Nexroo workflow engine. See docs at https://docs.nexroo.ai
 
 ## Installation
 
@@ -30,14 +23,9 @@ pip install nexroo-cli
 nexroo install
 ```
 
-Or install from source:
+### Installing Nexroo addons
 
-```bash
-git clone https://github.com/nexroo-ai/nexroo-cli.git
-cd nexroo-cli
-pip install -e .
-nexroo install
-```
+HERE DOC HOW TO ADD ROOMS-PKG
 
 ## Quick Start
 
@@ -80,12 +68,7 @@ Shows authentication status and token expiration.
 
 **With authentication** (SaaS features enabled):
 ```bash
-nexroo run workflow.json
-```
-
-**With specific entrypoint**:
-```bash
-nexroo run workflow.json entrypoint-id
+nexroo run workflow.json [entrypoint]
 ```
 
 **Without authentication** (local-only mode):
@@ -99,50 +82,14 @@ All ai-rooms-script options are supported:
 
 ```bash
 nexroo run workflow.json [entrypoint] [options]
-
-Options:
-  -v, --verbose          Enable verbose logging
-  --mock                 Run in mock mode
-  --dry-run              Run in dry-run mode
-  --mock-config PATH     Path to mock configuration file
-  --payload JSON         JSON payload string
-  --payload-file PATH    Path to JSON payload file
-  --no-auth              Skip authentication check
 ```
 
-## How It Works
-
-### With Authentication
-- Verifies token with Zitadel
-- Passes `SYNVEX_AUTH_TOKEN` to ai-rooms-script
-- Sets `SYNVEX_SAAS_ENABLED=true`
-- Enables backend API features
-
-### Without Authentication
-- Runs ai-rooms-script normally
-- No SaaS features available
-- Fully functional for local workflows
-
-## Authentication Flow
-
-1. **Login**: `nexroo login` opens browser for Zitadel authentication
-2. **Token Storage**: Encrypted token stored in `~/.nexroo/auth_token.enc`
-3. **Automatic Refresh**: Tokens refresh automatically when online
-4. **Grace Period**: 30-day offline usage after token expiration
-5. **Re-authentication**: After grace period, re-authenticate with `nexroo login`
-
-## Security
-
-- **Hardcoded Configuration**: Zitadel instance configuration is embedded in the binary (cannot be overridden)
-- **Token Encryption**: Tokens stored with Fernet encryption
-- **PKCE Flow**: No client secrets required for CLI
-- **File Permissions**: Key files stored with 0600 permissions
-- **JWT Verification**: All tokens verified against Zitadel's public keys
+Refer to [Nexroo Documentation](https://docs.nexroo.ai)
 
 ## Storage Locations
 
 - Encrypted tokens: `~/.nexroo/auth_token.enc`
-- Encryption key: `~/.nexroo/.key` (0600 permissions)
+- Encryption key: `~/.nexroo/.key`
 
 ## Troubleshooting
 
@@ -154,34 +101,19 @@ nexroo login
 
 ### Token expired
 ```bash
-nexroo status  # Check status
+nexroo status
 nexroo login   # Re-authenticate
-```
-
-### ai-rooms-script not found
-```bash
-pip install ai-rooms-script
-```
-
-## Development
-
-Install in development mode:
-
-```bash
-git clone https://github.com/nexroo-ai/nexroo-cli.git
-cd nexroo-cli
-pip install -e .
 ```
 
 ## Documentation
 
-See [SCRIPT_AUTH.md](./SCRIPT_AUTH.md) for detailed authentication architecture.
+See [Nexroo Documentation](https://docs.nexroo.ai) to know how to use Nexroo workflow engine.
 
 ## License
 
-MIT License - see [LICENSE](./LICENSE) file for details.
+PolyForm Noncommercial License 1.0.0 - see [LICENSE](./LICENSE) file for details.
+Or on <https://polyformproject.org/licenses/noncommercial/1.0.0>
 
 ## Support
 
 - GitHub Issues: https://github.com/nexroo-ai/nexroo-cli/issues
-- Documentation: https://docs.synvex.ai
