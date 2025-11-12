@@ -9,8 +9,7 @@ description = "CLI wrapper for ai-rooms-script with Zitadel authentication"
 authors = [{name = "Synvex", email = "contact@synvex.ai"}]
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-license = {text = "PolyForm Noncommercial License 1.0.0"}
-license-files = ["LICENSE"]
+license = "PolyForm Noncommercial License 1.0.0"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
