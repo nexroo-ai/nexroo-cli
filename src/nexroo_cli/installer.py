@@ -50,9 +50,23 @@ class BinaryInstaller:
         headers = self._get_headers()
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            response = await client.get(url, headers=headers)
-            response.raise_for_status()
-            release_data = response.json()
+            try:
+                response = await client.get(url, headers=headers)
+                response.raise_for_status()
+                release_data = response.json()
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    if not self.github_storage.has_token() and not self.github_storage.DEV_TOKEN:
+                        raise Exception(
+                            "Access token required to download nexroo-engine.\n"
+                            "Please login first."
+                        )
+                    else:
+                        raise Exception(
+                            "Repository not found or no releases available.\n"
+                            "Verify your access token or check if releases exist."
+                        )
+                raise
 
         asset_name = self._get_asset_name()
 
