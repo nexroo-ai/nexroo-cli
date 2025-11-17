@@ -78,31 +78,40 @@ async def ensure_binary_installed():
     installer = BinaryInstaller()
 
     if not installer.is_installed():
-        logger.info("ai-rooms-script binary not found. Installing...")
+        logger.info("nexroo-engine not found. Installing...")
         try:
             await installer.install()
-            logger.info("✓ ai-rooms-script installed successfully")
+            logger.info("✓ nexroo-engine installed successfully")
         except Exception as e:
-            logger.error(f"Failed to install ai-rooms-script: {e}")
+            logger.error(f"Failed to install nexroo-engine: {e}")
             sys.exit(1)
 
     return installer.get_binary_path()
 
 
-async def install_command():
+async def install_command(args):
     try:
-        installer = BinaryInstaller()
+        if args.package:
+            package_name = args.package
+            if not package_name.endswith("-rooms-pkg"):
+                package_name = f"{package_name}-rooms-pkg"
 
-        if installer.is_installed():
-            print("\n✓ ai-rooms-script binary already installed")
-            print(f"  Location: {installer.binary_path}")
-            print("\n  Run 'nexroo update' to update to latest version\n")
-            return
+            pkg_manager = PackageManager()
+            success = await pkg_manager.install(package_name, upgrade=args.upgrade)
+            sys.exit(0 if success else 1)
+        else:
+            installer = BinaryInstaller()
 
-        print("\nInstalling ai-rooms-script binary...")
-        await installer.install()
-        print("\n✓ ai-rooms-script installed successfully!")
-        print(f"  Location: {installer.binary_path}\n")
+            if installer.is_installed():
+                print("\n✓ nexroo-engine already installed")
+                print(f"  Location: {installer.binary_path}")
+                print("\n  Run 'nexroo update' to update to latest version\n")
+                return
+
+            print("\nInstalling nexroo-engine...")
+            await installer.install()
+            print("\n✓ nexroo-engine installed successfully!")
+            print(f"  Location: {installer.binary_path}\n")
 
     except Exception as e:
         print(f"\n✗ Installation failed: {e}\n")
@@ -113,7 +122,7 @@ async def update_command():
     try:
         installer = BinaryInstaller()
         await installer.update()
-        print("\n✓ ai-rooms-script updated successfully\n")
+        print("\n✓ nexroo-engine updated successfully\n")
     except Exception as e:
         print(f"\n✗ Update failed: {e}\n")
         sys.exit(1)
@@ -255,6 +264,11 @@ async def run_command(args):
         env['SYNVEX_AUTH_TOKEN'] = auth_token
         env['SYNVEX_SAAS_ENABLED'] = 'true'
 
+    pkg_manager = PackageManager()
+    plugin_dir = pkg_manager.get_plugin_dir()
+    if plugin_dir.exists():
+        env['NEXROO_PLUGIN_DIR'] = str(plugin_dir)
+
     cmd = [str(binary_path), str(args.workflow)]
 
     if args.entrypoint:
@@ -290,11 +304,14 @@ def main():
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    subparsers.add_parser('install', help='Install ai-rooms-script binary')
+    install_parser = subparsers.add_parser('install', help='Install nexroo-engine or addon packages')
+    install_parser.add_argument('package', nargs='?', help='Addon package name (e.g., openai, anthropic)')
+    install_parser.add_argument('--upgrade', action='store_true', help='Upgrade if already installed')
+
     subparsers.add_parser('login', help='Authenticate with Zitadel to access SaaS features')
     subparsers.add_parser('logout', help='Clear saved authentication credentials')
     subparsers.add_parser('status', help='Show authentication status')
-    subparsers.add_parser('update', help='Update ai-rooms-script binary to latest version')
+    subparsers.add_parser('update', help='Update nexroo-engine to latest version')
 
     addon_parser = subparsers.add_parser('addon', help='Manage addon packages')
     addon_subparsers = addon_parser.add_subparsers(dest='addon_command', help='Addon commands')
@@ -336,7 +353,7 @@ def main():
     setup_logging(verbose=getattr(args, 'verbose', False))
 
     if args.command == 'install':
-        asyncio.run(install_command())
+        asyncio.run(install_command(args))
     elif args.command == 'login':
         asyncio.run(login_command())
     elif args.command == 'logout':

@@ -212,9 +212,11 @@ class PackageManager:
 
         cmd = [
             sys.executable, "-m", "pip", "install",
-            "--target", str(self.plugin_dir),
-            "--upgrade" if upgrade else "--no-deps"
+            "--target", str(self.plugin_dir)
         ]
+
+        if upgrade:
+            cmd.append("--upgrade")
 
         if version and not url:
             cmd.append(f"{package_name}=={version}")
