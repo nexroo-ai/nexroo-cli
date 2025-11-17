@@ -8,6 +8,15 @@ CLI wrapper for Nexroo workflow engine with authentication and package managemen
 
 ### Quick Install (Recommended)
 
+```bash
+# install CLI
+pip install nexroo-cli
+# use CLI to install engine
+nexroo install
+```
+
+or
+
 **Linux/macOS:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nexroo-ai/nexroo-cli/main/install.sh | bash
@@ -18,12 +27,6 @@ curl -fsSL https://raw.githubusercontent.com/nexroo-ai/nexroo-cli/main/install.s
 irm https://raw.githubusercontent.com/nexroo-ai/nexroo-cli/main/install.ps1 | iex
 ```
 
-### Manual Install
-
-```bash
-pip install nexroo-cli
-nexroo install
-```
 
 ## Quick Start
 
