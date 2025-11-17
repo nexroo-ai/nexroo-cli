@@ -1,9 +1,10 @@
 # Nexroo CLI
 
-CLI wrapper for Nexroo workflow engine. See docs at https://docs.nexroo.ai
+> **📚 Full Documentation:** https://docs.nexroo.ai
+
+CLI wrapper for Nexroo workflow engine with authentication and package management.
 
 ## Installation
-
 
 ### Quick Install (Recommended)
 
@@ -23,10 +24,6 @@ irm https://raw.githubusercontent.com/nexroo-ai/nexroo-cli/main/install.ps1 | ie
 pip install nexroo-cli
 nexroo install
 ```
-
-### Installing Nexroo addons
-
-HERE DOC HOW TO ADD ROOMS-PKG
 
 ## Quick Start
 
@@ -79,13 +76,25 @@ nexroo run workflow.json --no-auth
 
 ### Additional Options
 
-All ai-rooms-script options are supported:
-
 ```bash
 nexroo run workflow.json [entrypoint] [options]
 ```
 
-Refer to [Nexroo Documentation](https://docs.nexroo.ai)
+Refer to [Nexroo Documentation](https://docs.nexroo.ai) for all available options.
+
+### Update
+
+```bash
+pip install --upgrade nexroo-cli
+nexroo update
+```
+
+### Uninstall
+
+```bash
+pip uninstall nexroo-cli
+rm -rf ~/.nexroo
+```
 
 ## Storage Locations
 
