@@ -95,8 +95,11 @@ nexroo update
 ### Uninstall
 
 ```bash
+# Uninstall engine, addons, and all data
+nexroo uninstall
+
+# Remove the CLI package
 pip uninstall nexroo-cli
-rm -rf ~/.nexroo
 ```
 
 ## Storage Locations

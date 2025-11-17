@@ -128,6 +128,40 @@ async def update_command():
         sys.exit(1)
 
 
+def uninstall_command(args):
+    try:
+        from pathlib import Path
+        import shutil
+
+        nexroo_dir = Path.home() / ".nexroo"
+
+        if not nexroo_dir.exists():
+            print("\n✓ Nothing to uninstall\n")
+            return
+
+        print("\nThis will remove:")
+        print(f"  - nexroo-engine binary")
+        print(f"  - All addons")
+        print(f"  - Authentication tokens")
+        print(f"  - All data in {nexroo_dir}")
+        print()
+
+        if not args.yes:
+            response = input("Continue? [y/N]: ").strip().lower()
+            if response != 'y':
+                print("\n✗ Uninstall cancelled\n")
+                return
+
+        shutil.rmtree(nexroo_dir)
+        print("\n✓ Uninstalled successfully")
+        print("\nTo remove the CLI package, run:")
+        print("  pip uninstall nexroo-cli\n")
+
+    except Exception as e:
+        print(f"\n✗ Uninstall failed: {e}\n")
+        sys.exit(1)
+
+
 async def addon_list_command(args):
     try:
         pkg_manager = PackageManager()
@@ -313,6 +347,9 @@ def main():
     subparsers.add_parser('status', help='Show authentication status')
     subparsers.add_parser('update', help='Update nexroo-engine to latest version')
 
+    uninstall_parser = subparsers.add_parser('uninstall', help='Uninstall nexroo-engine, addons, and all data')
+    uninstall_parser.add_argument('-y', '--yes', action='store_true', help='Skip confirmation')
+
     addon_parser = subparsers.add_parser('addon', help='Manage addon packages')
     addon_subparsers = addon_parser.add_subparsers(dest='addon_command', help='Addon commands')
 
@@ -362,6 +399,8 @@ def main():
         asyncio.run(status_command())
     elif args.command == 'update':
         asyncio.run(update_command())
+    elif args.command == 'uninstall':
+        uninstall_command(args)
     elif args.command == 'addon':
         if args.addon_command == 'list':
             asyncio.run(addon_list_command(args))
