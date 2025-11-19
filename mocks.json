@@ -1,0 +1,39 @@
+{
+  "template::llm_completion": {
+    "mock_response": {
+      "completion": "Analyzed the provided JSON content and extracted key insights about user preferences and activity patterns.",
+      "model": "gpt-4",
+      "tokens_used": 150
+    }
+  },
+  "template::semantic_search": {
+    "mock_response": {
+      "results": [
+        {
+          "content": "JSON processing example",
+          "score": 0.85,
+          "metadata": {"type": "example"}
+        },
+        {
+          "content": "Template engine usage",
+          "score": 0.78,
+          "metadata": {"type": "documentation"}
+        }
+      ],
+      "total_results": 2
+    }
+  },
+  "template::database_query": {
+    "mock_response": {
+      "rows": [
+        {
+          "id": 1,
+          "data": "test_data_from_payload",
+          "user": "johndoe"
+        }
+      ],
+      "row_count": 1,
+      "query_time_ms": 25
+    }
+  }
+}

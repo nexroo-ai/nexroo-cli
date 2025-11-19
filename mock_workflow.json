@@ -1,0 +1,500 @@
+{
+  "addons": [],
+  "entrypoints": [
+    {
+      "id": "default",
+      "name": "Template Engine Test",
+      "startAt": "step-payload-shortcuts-test",
+      "guards": []
+    }
+  ],
+  "workflow": {
+    "id": "template-engine-test-workflow",
+    "version": "1.0.0",
+    "name": "Template Engine & Payload Test Workflow",
+    "description": "Comprehensive test of template engine features including payload shortcuts, nested access, and all variable types",
+    "steps": [
+      {
+        "name": "Test Payload Shortcuts",
+        "id": "step-payload-shortcuts-test",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "test_description": "Testing payload shortcut features",
+            "full_payload": "{{payload}}",
+            "payload_content": "{{payload.content}}",
+            "payload_type": "{{payload.type}}",
+            "payload_metadata": "{{payload.metadata}}",
+            "shortcut_username": "{{payload.content.username}}",
+            "shortcut_email": "{{payload.content.email}}",
+            "shortcut_nested_preference": "{{payload.content.profile.theme}}",
+            "shortcut_deep_nested": "{{payload.content.profile.settings.notifications.email}}",
+            "explicit_content_access": "{{payload.content.username}}",
+            "explicit_nested_access": "{{payload.content.profile.settings.notifications.email}}"
+          }
+        },
+        "next": ["step-debug-logging"]
+      },
+      {
+        "name": "Debug Logging Test",
+        "id": "step-debug-logging",
+        "action": "builtin::log",
+        "runLimit": 1,
+        "parameters": {
+          "message": "Debug: Processing user {{payload.content.username}} with email {{payload.content.email}} and theme {{payload.content.profile.theme}}",
+          "level": "INFO"
+        },
+        "next": ["step-debug-delay"]
+      },
+      {
+        "name": "Debug Delay Test",
+        "id": "step-debug-delay",
+        "action": "builtin::delay",
+        "runLimit": 1,
+        "parameters": {
+          "seconds": 1
+        },
+        "next": ["step-context-variables-test"]
+      },
+      {
+        "name": "Test Context Variables",
+        "id": "step-context-variables-test",
+        "action": "builtin::context_set",
+        "runLimit": 1,
+        "parameters": {
+          "name": "test_context",
+          "value": {
+            "user_data": "{{payload.content.username}}",
+            "preferences": "{{payload.content.profile}}",
+            "timestamp": "2024-01-01T00:00:00Z"
+          },
+          "metadata": {
+            "source": "template_test",
+            "payload_type": "{{payload.type}}"
+          }
+        },
+        "next": ["step-debug-context-get"]
+      },
+      {
+        "name": "Debug Context Get Test",
+        "id": "step-debug-context-get",
+        "action": "builtin::context_get",
+        "runLimit": 1,
+        "parameters": {
+          "name": "test_context"
+        },
+        "next": ["step-context-access-test"]
+      },
+      {
+        "name": "Test Context Access",
+        "id": "step-context-access-test",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "context_full": "{{context.test_context}}",
+            "context_user_data": "{{context.test_context.user_data}}",
+            "context_preferences": "{{context.test_context.preferences}}",
+            "context_nested": "{{context.test_context.preferences.theme}}",
+            "all_contexts": "{{context}}",
+            "retrieved_context": "{{step-debug-context-get.output.value}}"
+          }
+        },
+        "next": ["step-step-outputs-test"]
+      },
+      {
+        "name": "Create Step Output",
+        "id": "step-step-outputs-test",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "user_info": {
+              "name": "{{payload.content.username}}",
+              "email": "{{payload.content.email}}",
+              "theme": "{{payload.content.profile.theme}}"
+            },
+            "processing_info": {
+              "payload_type": "{{payload.type}}",
+              "timestamp": "2024-01-01T00:00:00Z",
+              "step_name": "step-outputs-test"
+            },
+            "nested_data": {
+              "level1": {
+                "level2": {
+                  "value": "deep_value_from_payload_{{payload.content.username}}"
+                }
+              }
+            }
+          }
+        },
+        "next": ["step-reference-outputs-test"]
+      },
+      {
+        "name": "Reference Previous Step Outputs",
+        "id": "step-reference-outputs-test",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "ref_full_output": "{{step-step-outputs-test.output.transformed}}",
+            "ref_user_name": "{{step-step-outputs-test.output.transformed.user_info.name}}",
+            "ref_user_email": "{{step-step-outputs-test.output.transformed.user_info.email}}",
+            "ref_processing_timestamp": "{{step-step-outputs-test.output.transformed.processing_info.timestamp}}",
+            "ref_deep_nested": "{{step-step-outputs-test.output.transformed.nested_data.level1.level2.value}}",
+            "combined_template": "User {{step-step-outputs-test.output.transformed.user_info.name}} with email {{step-step-outputs-test.output.transformed.user_info.email}} prefers {{payload.content.profile.theme}} theme"
+          }
+        },
+        "next": ["step-debug-parallel-setup"]
+      },
+      {
+        "name": "Debug Parallel Setup",
+        "id": "step-debug-parallel-setup",
+        "action": "builtin::log",
+        "runLimit": 1,
+        "parameters": {
+          "message": "Setting up parallel execution branches for user {{payload.content.username}}",
+          "level": "INFO"
+        },
+        "next": ["step-parallel-branch-a", "step-parallel-branch-b", "step-parallel-branch-c"]
+      },
+      {
+        "name": "Parallel Branch A",
+        "id": "step-parallel-branch-a",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "branch": "A",
+            "user": "{{payload.content.username}}",
+            "data": "Branch A processed user data",
+            "timestamp": "2024-01-01T00:00:01Z"
+          }
+        },
+        "next": ["step-debug-convergence"]
+      },
+      {
+        "name": "Parallel Branch B",
+        "id": "step-parallel-branch-b",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "branch": "B",
+            "email": "{{payload.content.email}}",
+            "data": "Branch B processed email data",
+            "timestamp": "2024-01-01T00:00:02Z"
+          }
+        },
+        "next": ["step-debug-convergence"]
+      },
+      {
+        "name": "Parallel Branch C",
+        "id": "step-parallel-branch-c",
+        "action": "builtin::delay",
+        "runLimit": 1,
+        "parameters": {
+          "seconds": 1
+        },
+        "next": ["step-debug-convergence"]
+      },
+      {
+        "name": "Debug Convergence Point",
+        "id": "step-debug-convergence",
+        "action": "builtin::transform",
+        "waitForAll": true,
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "convergence_test": "All parallel branches completed",
+            "branch_a_result": "{{step-parallel-branch-a.output.transformed.data}}",
+            "branch_b_result": "{{step-parallel-branch-b.output.transformed.data}}",
+            "branch_c_delay": "{{step-parallel-branch-c.output.delayed}}",
+            "all_branches_user": "{{step-parallel-branch-a.output.transformed.user}}",
+            "all_branches_email": "{{step-parallel-branch-b.output.transformed.email}}",
+            "convergence_timestamp": "2024-01-01T00:00:03Z"
+          }
+        },
+        "next": ["step-conditional-test"]
+      },
+      {
+        "name": "Test Conditional Logic",
+        "id": "step-conditional-test",
+        "action": "logic::if",
+        "runLimit": 1,
+        "parameters": {
+          "condition": "{{payload.content.username}} == 'johndoe'"
+        },
+        "condition": {
+          "if": "{{step-conditional-test.output.condition_met}} == true",
+          "then": "step-user-specific-processing",
+          "else": "step-generic-processing"
+        }
+      },
+      {
+        "name": "User-Specific Processing",
+        "id": "step-user-specific-processing",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "processing_type": "user_specific",
+            "username": "{{payload.content.username}}",
+            "personalized_message": "Welcome back {{payload.content.username}}! Your theme is {{payload.content.profile.theme}}",
+            "notification_settings": "{{payload.content.profile.settings.notifications}}",
+            "condition_result": "{{step-conditional-test.output.condition_met}}",
+            "convergence_data": "{{step-debug-convergence.output.transformed.convergence_test}}"
+          }
+        },
+        "next": ["step-debug-error-handling"]
+      },
+      {
+        "name": "Generic Processing",
+        "id": "step-generic-processing",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "processing_type": "generic",
+            "username": "{{payload.content.username}}",
+            "generic_message": "Hello {{payload.content.username}}, welcome!",
+            "default_theme": "light",
+            "condition_result": "{{step-conditional-test.output.condition_met}}",
+            "convergence_data": "{{step-debug-convergence.output.transformed.convergence_test}}"
+          }
+        },
+        "next": ["step-debug-error-handling"]
+      },
+      {
+        "name": "Debug Error Handling Test",
+        "id": "step-debug-error-handling",
+        "action": "builtin::log",
+        "runLimit": 3,
+        "parameters": {
+          "message": "Testing error handling with graceful continuation for {{payload.content.username}}"
+        },
+        "onError": {
+          "action": "continue-workflow"
+        },
+        "next": ["step-memory-operations"]
+      },
+      {
+        "name": "Test Memory Operations",
+        "id": "step-memory-operations",
+        "action": "builtin::memory_push",
+        "runLimit": 1,
+        "parameters": {
+          "content": "User {{payload.content.username}} processed with {{payload.content.profile.theme}} theme at {{step-step-outputs-test.output.transformed.processing_info.timestamp}}",
+          "tags": ["user_processing", "{{payload.content.username}}", "{{payload.content.profile.theme}}"],
+          "vectorize": true,
+          "metadata": {
+            "username": "{{payload.content.username}}",
+            "email": "{{payload.content.email}}",
+            "theme": "{{payload.content.profile.theme}}",
+            "processing_step": "memory_operations",
+            "payload_type": "{{payload.type}}"
+          }
+        },
+        "next": ["step-memory-query"]
+      },
+      {
+        "name": "Query Memory with Templates",
+        "id": "step-memory-query",
+        "action": "builtin::memory_query",
+        "runLimit": 1,
+        "parameters": {
+          "query": "user processing {{payload.content.username}} theme",
+          "tags": ["user_processing", "{{payload.content.username}}"],
+          "top_k": 5
+        },
+        "next": ["step-loop-test"]
+      },
+      {
+        "name": "Test Loop with Templates",
+        "id": "step-loop-test",
+        "action": "logic::loop",
+        "runLimit": 1,
+        "parameters": {
+          "items": ["{{payload.content.email}}", "{{payload.content.username}}", "{{payload.content.profile.theme}}"]
+        },
+        "next": ["step-process-loop-item"]
+      },
+      {
+        "name": "Process Loop Item",
+        "id": "step-process-loop-item",
+        "action": "builtin::transform",
+        "runLimit": 5,
+        "parameters": {
+          "rules": {
+            "current_item": "{{loop_item}}",
+            "loop_index": "{{loop_index}}",
+            "item_type": "loop_item_{{loop_index}}",
+            "combined_with_payload": "Processing {{loop_item}} for user {{payload.content.username}}",
+            "step_reference": "Previous step result: {{step-memory-query.output.count}}",
+            "convergence_reference": "{{step-debug-convergence.output.transformed.convergence_test}}"
+          }
+        },
+        "condition": {
+          "if": "{{loop_index}} < 2",
+          "then": "step-process-loop-item",
+          "else": "step-content-operations"
+        }
+      },
+      {
+        "name": "Test Content Operations",
+        "id": "step-content-operations",
+        "action": "builtin::content_validate",
+        "runLimit": 1,
+        "parameters": {
+          "content": "{{payload.content}}",
+          "type": "{{payload.type}}"
+        },
+        "next": ["step-content-transform"]
+      },
+      {
+        "name": "Transform Content with Templates",
+        "id": "step-content-transform",
+        "action": "builtin::content_transform",
+        "runLimit": 1,
+        "parameters": {
+          "content": "{\"user\": \"{{payload.content.username}}\", \"email\": \"{{payload.content.email}}\", \"theme\": \"{{payload.content.profile.theme}}\", \"original_content\": \"{{payload.content}}\"}",
+          "from_type": "text/plain",
+          "to_type": "application/json"
+        },
+        "next": ["step-context-assembly"]
+      },
+      {
+        "name": "Assemble Context with All Data",
+        "id": "step-context-assembly",
+        "action": "builtin::context_assembler",
+        "runLimit": 1,
+        "parameters": {
+          "include": [
+            "payload.content.username",
+            "payload.content.email",
+            "payload.content.profile",
+            "step-step-outputs-test.output.transformed",
+            "step-memory-query.output.results",
+            "step-content-transform.output",
+            "step-debug-convergence.output.transformed"
+          ],
+          "max_tokens": 2000,
+          "format": "json"
+        },
+        "next": ["step-template-combinations"]
+      },
+      {
+        "name": "Test Template Combinations",
+        "id": "step-template-combinations",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "simple_template": "Hello {{payload.content.username}}",
+            "nested_template": "User {{payload.content.username}} has email {{payload.content.email}}",
+            "mixed_sources": "Step output: {{step-step-outputs-test.output.transformed.user_info.name}}, Payload: {{payload.content.username}}",
+            "conditional_in_template": "Theme is {{payload.content.profile.theme}} and user is {{payload.content.username}}",
+            "complex_nested": "Deep access: {{step-step-outputs-test.output.transformed.nested_data.level1.level2.value}}",
+            "loop_reference": "Last loop item was: {{step-process-loop-item.output.transformed.current_item}}",
+            "memory_count": "Found {{step-memory-query.output.count}} memory items",
+            "content_validation": "Content valid: {{step-content-operations.output.valid}}",
+            "context_format": "Context assembled as: {{step-context-assembly.output.format}}",
+            "convergence_reference": "Convergence result: {{step-debug-convergence.output.transformed.convergence_test}}",
+            "parallel_branch_data": "Branch A: {{step-parallel-branch-a.output.transformed.data}}, Branch B: {{step-parallel-branch-b.output.transformed.data}}"
+          }
+        },
+        "next": ["step-edge-cases"]
+      },
+      {
+        "name": "Test Edge Cases",
+        "id": "step-edge-cases",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "missing_field": "{{payload.nonexistent}}",
+            "deep_missing": "{{payload.profile.settings.nonexistent}}",
+            "empty_fallback": "{{payload.empty_field}}",
+            "mixed_valid_invalid": "Valid: {{payload.content.username}}, Invalid: {{payload.missing}}",
+            "step_missing": "{{nonexistent-step.output.data}}",
+            "context_missing": "{{context.missing_context.data}}"
+          }
+        },
+        "next": ["step-final-report"]
+      },
+      {
+        "name": "Generate Final Test Report",
+        "id": "step-final-report",
+        "action": "builtin::transform",
+        "runLimit": 1,
+        "parameters": {
+          "rules": {
+            "test_summary": "Template Engine Test Completed Successfully",
+            "payload_shortcuts_tested": {
+              "username": "{{payload.content.username}}",
+              "email": "{{payload.content.email}}",
+              "theme": "{{payload.content.profile.theme}}",
+              "deep_nested": "{{payload.content.profile.settings.notifications.email}}"
+            },
+            "step_output_references": {
+              "user_info": "{{step-step-outputs-test.output.transformed.user_info}}",
+              "processing_info": "{{step-step-outputs-test.output.transformed.processing_info}}"
+            },
+            "context_operations": {
+              "context_set": "{{context.test_context}}",
+              "context_get": "{{step-debug-context-get.output.value}}",
+              "memory_items": "{{step-memory-query.output.count}}"
+            },
+            "parallel_execution": {
+              "convergence_test": "{{step-debug-convergence.output.transformed.convergence_test}}",
+              "branch_a_result": "{{step-debug-convergence.output.transformed.branch_a_result}}",
+              "branch_b_result": "{{step-debug-convergence.output.transformed.branch_b_result}}",
+              "delay_result": "{{step-debug-convergence.output.transformed.branch_c_delay}}"
+            },
+            "utility_actions": {
+              "delay_tested": "{{step-debug-delay.output.delayed}}",
+              "logging_tested": "INFO level logging completed"
+            },
+            "loop_operations": {
+              "final_loop_item": "{{step-process-loop-item.output.transformed.current_item}}",
+              "final_loop_index": "{{step-process-loop-item.output.transformed.loop_index}}"
+            },
+            "conditional_results": {
+              "condition_met": "{{step-conditional-test.output.condition_met}}",
+              "processing_type": "User-specific or generic based on condition"
+            },
+            "content_operations": {
+              "validation_result": "{{step-content-operations.output.valid}}",
+              "transformation_result": "{{step-content-transform.output.success}}"
+            },
+            "error_handling": {
+              "graceful_continuation": "Error handling with continue-workflow tested"
+            },
+            "edge_cases": {
+              "missing_handled": "Missing fields should return null/empty",
+              "error_resilience": "Template engine should handle missing references gracefully"
+            },
+            "test_timestamp": "2024-01-01T00:00:00Z",
+            "total_steps_executed": 21,
+            "features_tested": [
+              "payload shortcuts",
+              "step output references", 
+              "context management",
+              "parallel execution",
+              "convergence points",
+              "conditional logic",
+              "loop operations",
+              "memory operations",
+              "content operations",
+              "utility actions",
+              "error handling",
+              "template combinations",
+              "edge cases"
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
