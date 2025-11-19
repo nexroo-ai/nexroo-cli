@@ -22,7 +22,7 @@ def setup_logging(verbose: bool = False):
 
 async def login_command():
     print("\nLogin feature not yet available")
-    print("  This feature will be available with the SaaS release in Q1 2026")
+    print("  This feature will be available with the SaaS release in Q1 2026 after the end of the open beta phase.")
     print("  Stay tuned for updates: https://www.linkedin.com/company/nexroo\n")
 
 

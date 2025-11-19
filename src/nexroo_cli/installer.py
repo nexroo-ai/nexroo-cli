@@ -6,18 +6,16 @@ from pathlib import Path
 from typing import Optional, Dict
 import httpx
 from loguru import logger
-from .auth import GitHubTokenStorage
 
 
 class BinaryInstaller:
-    GITHUB_REPO = "nexroo-ai/nexroo-engine"
+    GITHUB_REPO = "nexroo-ai/nexroo-cli"
     CACHE_DIR = Path.home() / ".nexroo" / "cache"
 
     def __init__(self):
         self.platform = self._detect_platform()
         self.python_tag = self._get_python_tag()
         self.version_file = Path.home() / ".nexroo" / ".engine_version"
-        self.github_storage = GitHubTokenStorage()
 
     def _detect_platform(self) -> str:
         system = platform.system().lower()
@@ -41,48 +39,47 @@ class BinaryInstaller:
         elif self.platform == "windows":
             return "win"
 
-    def _get_headers(self) -> Dict[str, str]:
-        headers = {}
-        token = self.github_storage.get_token()
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        return headers
-
     async def get_latest_release_info(self) -> Dict[str, str]:
-        url = f"https://api.github.com/repos/{self.GITHUB_REPO}/releases/latest"
-        headers = self._get_headers()
+        """Get the latest Engine release from public GitHub releases."""
+        url = f"https://api.github.com/repos/{self.GITHUB_REPO}/releases"
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
             try:
-                response = await client.get(url, headers=headers)
+                response = await client.get(url)
                 response.raise_for_status()
-                release_data = response.json()
+                releases = response.json()
             except httpx.HTTPStatusError as e:
                 if e.response.status_code == 404:
-                    if not self.github_storage.has_token() and not self.github_storage.DEV_TOKEN:
-                        raise Exception(
-                            "Access token required to download nexroo-engine.\n"
-                            "Please login first."
-                        )
-                    else:
-                        raise Exception(
-                            "Repository not found or no releases available.\n"
-                            "Verify your access token or check if releases exist."
-                        )
+                    raise Exception(
+                        "Repository not found or no releases available.\n"
+                        "Check https://github.com/nexroo-ai/nexroo-cli/releases"
+                    )
                 raise
+
+        # Find the latest release that starts with "Engine "
+        engine_release = None
+        for release in releases:
+            if release.get("name", "").startswith("Engine "):
+                engine_release = release
+                break
+
+        if not engine_release:
+            raise Exception(
+                "No Engine releases found.\n"
+                "Check https://github.com/nexroo-ai/nexroo-cli/releases"
+            )
 
         platform_pattern = self._get_platform_wheel_pattern()
         python_tag = self.python_tag
 
-        for asset in release_data.get("assets", []):
+        for asset in engine_release.get("assets", []):
             asset_name = asset["name"]
             if (asset_name.endswith(".whl") and
                 platform_pattern in asset_name.lower() and
                 python_tag in asset_name):
-                download_url = asset["url"] if self.github_storage.get_token() else asset["browser_download_url"]
                 return {
-                    "version": release_data["tag_name"],
-                    "download_url": download_url,
+                    "version": engine_release["tag_name"],
+                    "download_url": asset["browser_download_url"],
                     "filename": asset_name
                 }
 
@@ -106,13 +103,9 @@ class BinaryInstaller:
         self.CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
         temp_path = self.CACHE_DIR / filename
-        headers = self._get_headers()
-
-        if self.github_storage.get_token():
-            headers["Accept"] = "application/octet-stream"
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
-            async with client.stream("GET", url, headers=headers) as response:
+            async with client.stream("GET", url) as response:
                 response.raise_for_status()
 
                 total = int(response.headers.get("content-length", 0))
