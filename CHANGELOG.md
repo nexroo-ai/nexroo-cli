@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.0 (2025-11-19)
+
+### Features
+
+- **login**: No saas feature yet
+  ([`9ef00a2`](https://github.com/nexroo-ai/nexroo-cli/commit/9ef00a278b09dcf77939cbcf1befc874547239ca))
+
+
 ## v1.3.2 (2025-11-19)
 
 
