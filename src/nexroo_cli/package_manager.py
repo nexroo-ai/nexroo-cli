@@ -2,8 +2,10 @@ import sys
 import subprocess
 import json
 import compileall
+import shutil
+import site
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from loguru import logger
 import importlib.metadata
@@ -116,6 +118,63 @@ class PackageManager:
         self.plugin_dir.mkdir(exist_ok=True, parents=True)
 
         self.installed_file = self.config_dir / "installed_packages.json"
+        self.system_python = self._detect_system_python()
+
+    def _normalize_package_name(self, name: str) -> str:
+        if name.endswith("-rooms-pkg"):
+            return name
+        return f"{name}-rooms-pkg"
+
+    def _detect_system_python(self) -> Optional[Tuple[str, str]]:
+        python_candidates = ['python3', 'python', 'python3.11', 'python3.12', 'python3.13']
+
+        logger.debug(f"Searching for system Python among: {python_candidates}")
+        for cmd in python_candidates:
+            python_path = shutil.which(cmd)
+            logger.debug(f"Checking '{cmd}': {python_path}")
+            if python_path:
+                try:
+                    result = subprocess.run(
+                        [python_path, '--version'],
+                        capture_output=True,
+                        text=True,
+                        timeout=5
+                    )
+                    if result.returncode == 0:
+                        version_str = result.stdout.strip() or result.stderr.strip()
+                        logger.debug(f"Found system Python: {python_path} ({version_str})")
+                        return (python_path, version_str)
+                except Exception as e:
+                    logger.debug(f"Failed to check {python_path}: {e}")
+                    continue
+
+        logger.warning("No system Python installation found")
+        return None
+
+    def get_system_python_site_packages(self) -> Optional[str]:
+        if not self.system_python:
+            logger.debug("No system Python detected")
+            return None
+
+        python_path = self.system_python[0]
+        logger.debug(f"Getting site-packages from: {python_path}")
+        try:
+            result = subprocess.run(
+                [python_path, '-c', 'import sysconfig; print(sysconfig.get_path("purelib"))'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                site_packages = result.stdout.strip()
+                logger.debug(f"System Python site-packages: {site_packages}")
+                return site_packages
+            else:
+                logger.warning(f"Failed to get site-packages: {result.stderr}")
+        except Exception as e:
+            logger.warning(f"Failed to get site-packages: {e}")
+
+        return None
 
     def _load_installed(self) -> Dict:
         if not self.installed_file.exists():
@@ -177,22 +236,53 @@ class PackageManager:
     def list_installed(self) -> List[Dict]:
         installed_meta = self._load_installed()
         result = []
+        seen = set()
 
         for name, info in installed_meta.items():
-            location = self.get_installed_location(name)
-            if location:
+            version = info.get("version", "unknown")
+            try:
+                dist = importlib.metadata.distribution(name)
+                version = dist.version
+            except importlib.metadata.PackageNotFoundError:
+                pass
+
+            result.append({
+                "name": name,
+                "version": version,
+                "description": info.get("description", ""),
+                "installed_at": info.get("installed_at", ""),
+                "location": "installed"
+            })
+            seen.add(name)
+
+        for dist in importlib.metadata.distributions():
+            name = dist.metadata.get("Name", "")
+            if name.endswith("-rooms-pkg") and name not in seen:
+                version = dist.version
+                description = dist.metadata.get("Summary", "")
                 result.append({
                     "name": name,
-                    "version": info.get("version", "unknown"),
-                    "description": info.get("description", ""),
-                    "installed_at": info.get("installed_at", ""),
-                    "location": location
+                    "version": version,
+                    "description": description,
+                    "installed_at": "unknown",
+                    "location": "bundled"
                 })
+                seen.add(name)
 
         return result
 
     async def install(self, package_name: str, version: Optional[str] = None,
                      url: Optional[str] = None, upgrade: bool = False) -> bool:
+        package_name = self._normalize_package_name(package_name)
+
+        if not self.system_python:
+            logger.error("No system Python installation found")
+            logger.info("Please install Python 3.11+ to use addon packages")
+            logger.info("  Windows: https://www.python.org/downloads/")
+            logger.info("  Linux: apt install python3 / yum install python3")
+            logger.info("  macOS: brew install python3")
+            return False
+
         package_info = self.registry.get_package(package_name)
 
         if not package_info and not url:
@@ -210,10 +300,8 @@ class PackageManager:
 
         install_url = url or package_info["url"]
 
-        cmd = [
-            sys.executable, "-m", "pip", "install",
-            "--target", str(self.plugin_dir)
-        ]
+        python_path = self.system_python[0]
+        cmd = [python_path, "-m", "pip", "install"]
 
         if upgrade:
             cmd.append("--upgrade")
@@ -223,17 +311,13 @@ class PackageManager:
         else:
             cmd.append(install_url)
 
-        logger.info(f"Installing {package_name} to {self.plugin_dir}...")
+        logger.info(f"Installing {package_name}...")
+        logger.debug(f"Using Python: {python_path}")
         logger.debug(f"Command: {' '.join(cmd)}")
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             logger.debug(result.stdout)
-
-            logger.debug("Compiling bytecode...")
-            pkg_dir = self.plugin_dir / package_name.replace("-", "_")
-            if pkg_dir.exists():
-                compileall.compile_dir(pkg_dir, quiet=1, force=True)
 
             installed_version = self.get_installed_version(package_name) or "unknown"
 
@@ -243,11 +327,11 @@ class PackageManager:
                 "description": package_info["description"] if package_info else "",
                 "installed_at": datetime.now().isoformat(),
                 "source": install_url,
-                "location": "plugin"
+                "location": "system"
             }
             self._save_installed(installed)
 
-            logger.success(f"✓ Successfully installed {package_name} v{installed_version}")
+            print(f"\n✓ Successfully installed {package_name.replace('-rooms-pkg', '')} v{installed_version}\n")
             return True
 
         except subprocess.CalledProcessError as e:
@@ -258,14 +342,10 @@ class PackageManager:
             return False
 
     async def uninstall(self, package_name: str, force: bool = False) -> bool:
-        location = self.get_installed_location(package_name)
+        package_name = self._normalize_package_name(package_name)
 
-        if not location:
+        if not self.is_installed(package_name):
             logger.warning(f"Package '{package_name}' is not installed")
-            return False
-
-        if location == "bundled":
-            logger.error(f"Cannot uninstall bundled package '{package_name}'")
             return False
 
         if not force:
@@ -278,22 +358,25 @@ class PackageManager:
         logger.info(f"Uninstalling {package_name}...")
 
         try:
-            import shutil
+            if not self.system_python:
+                logger.error("No system Python found")
+                return False
 
-            pkg_dir = self.plugin_dir / package_name.replace("-", "_")
-            if pkg_dir.exists():
-                shutil.rmtree(pkg_dir)
+            python_path = self.system_python[0]
+            cmd = [python_path, "-m", "pip", "uninstall", "-y", package_name]
 
-            dist_info_pattern = f"{package_name.replace('-', '_')}*.dist-info"
-            for dist_info in self.plugin_dir.glob(dist_info_pattern):
-                shutil.rmtree(dist_info)
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            if result.returncode != 0:
+                logger.error(f"pip uninstall failed: {result.stderr}")
+                return False
 
             installed = self._load_installed()
             if package_name in installed:
                 del installed[package_name]
                 self._save_installed(installed)
 
-            logger.success(f"✓ Uninstalled {package_name}")
+            print(f"\n✓ Successfully uninstalled {package_name.replace('-rooms-pkg', '')}\n")
             return True
 
         except Exception as e:
@@ -301,6 +384,7 @@ class PackageManager:
             return False
 
     async def update(self, package_name: str) -> bool:
+        package_name = self._normalize_package_name(package_name)
         location = self.get_installed_location(package_name)
 
         if not location:

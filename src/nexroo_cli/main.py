@@ -15,7 +15,7 @@ def setup_logging(verbose: bool = False):
     level = "DEBUG" if verbose else "INFO"
     logger.add(
         sys.stderr,
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
         level=level
     )
 
@@ -81,37 +81,23 @@ async def ensure_binary_installed():
         logger.info("nexroo-engine not found. Installing...")
         try:
             await installer.install()
-            logger.info("✓ nexroo-engine installed successfully")
         except Exception as e:
             logger.error(f"Failed to install nexroo-engine: {e}")
             sys.exit(1)
 
-    return installer.get_binary_path()
-
 
 async def install_command(args):
     try:
-        if args.package:
-            package_name = args.package
-            if not package_name.endswith("-rooms-pkg"):
-                package_name = f"{package_name}-rooms-pkg"
+        installer = BinaryInstaller()
 
-            pkg_manager = PackageManager()
-            success = await pkg_manager.install(package_name, upgrade=args.upgrade)
-            sys.exit(0 if success else 1)
-        else:
-            installer = BinaryInstaller()
+        if installer.is_installed():
+            print("\n✓ nexroo-engine already installed")
+            print("\n  Run 'nexroo update' to update to latest version\n")
+            return
 
-            if installer.is_installed():
-                print("\n✓ nexroo-engine already installed")
-                print(f"  Location: {installer.binary_path}")
-                print("\n  Run 'nexroo update' to update to latest version\n")
-                return
-
-            print("\nInstalling nexroo-engine...")
-            await installer.install()
-            print("\n✓ nexroo-engine installed successfully!")
-            print(f"  Location: {installer.binary_path}\n")
+        print("\nInstalling nexroo-engine...")
+        await installer.install()
+        print("\n✓ nexroo-engine installed successfully!\n")
 
     except Exception as e:
         print(f"\n✗ Installation failed: {e}\n")
@@ -121,8 +107,14 @@ async def install_command(args):
 async def update_command():
     try:
         installer = BinaryInstaller()
+        current_version = installer._get_installed_version()
         await installer.update()
-        print("\n✓ nexroo-engine updated successfully\n")
+        new_version = installer._get_installed_version()
+
+        if current_version == new_version and current_version:
+            print(f"\n✓ Already up to date ({current_version})\n")
+        else:
+            print("\n✓ nexroo-engine updated successfully\n")
     except Exception as e:
         print(f"\n✗ Update failed: {e}\n")
         sys.exit(1)
@@ -133,14 +125,15 @@ def uninstall_command(args):
         from pathlib import Path
         import shutil
 
+        installer = BinaryInstaller()
         nexroo_dir = Path.home() / ".nexroo"
 
-        if not nexroo_dir.exists():
+        if not nexroo_dir.exists() and not installer.is_installed():
             print("\n✓ Nothing to uninstall\n")
             return
 
         print("\nThis will remove:")
-        print(f"  - nexroo-engine binary")
+        print(f"  - nexroo-engine package")
         print(f"  - All addons")
         print(f"  - Authentication tokens")
         print(f"  - All data in {nexroo_dir}")
@@ -152,7 +145,11 @@ def uninstall_command(args):
                 print("\n✗ Uninstall cancelled\n")
                 return
 
-        shutil.rmtree(nexroo_dir)
+        installer.uninstall()
+
+        if nexroo_dir.exists():
+            shutil.rmtree(nexroo_dir)
+
         print("\n✓ Uninstalled successfully")
         print("\nTo remove the CLI package, run:")
         print("  pip uninstall nexroo-cli\n")
@@ -172,24 +169,26 @@ async def addon_list_command(args):
                 print("\nNo packages found\n")
                 return
 
-            print(f"\nAvailable addon packages ({len(packages)}):\n")
-            for pkg in sorted(packages, key=lambda p: p["name"]):
-                print(f"  {pkg['name']}")
-                if pkg.get("description"):
-                    print(f"    {pkg['description']}")
+            print(f"\nAvailable addons ({len(packages)}):\n")
+            names = sorted([pkg['name'].replace('-rooms-pkg', '') for pkg in packages])
+            for name in names:
+                print(f"  {name}")
             print()
         else:
             installed = pkg_manager.list_installed()
             if not installed:
                 print("\nNo addons installed\n")
                 print("  Run 'nexroo addon list --available' to see available packages")
-                print("  Run 'nexroo addon install <package>' to install\n")
+                print("  Run 'nexroo addon install <name>' to install\n")
                 return
 
             print(f"\nInstalled addons ({len(installed)}):\n")
             for pkg in installed:
-                loc = "bundled" if pkg["location"] == "bundled" else "plugin"
-                print(f"  {pkg['name']} v{pkg['version']} [{loc}]")
+                short_name = pkg['name'].replace('-rooms-pkg', '')
+                if pkg["location"] == "bundled":
+                    print(f"  {short_name} v{pkg['version']} [bundled]")
+                else:
+                    print(f"  {short_name} v{pkg['version']}")
                 if pkg.get("description"):
                     print(f"    {pkg['description']}")
             print()
@@ -210,7 +209,8 @@ async def addon_search_command(args):
 
         print(f"\nSearch results for '{args.query}' ({len(results)}):\n")
         for pkg in results:
-            print(f"  {pkg['name']}")
+            short_name = pkg['name'].replace('-rooms-pkg', '')
+            print(f"  {short_name}")
             if pkg.get("description"):
                 print(f"    {pkg['description']}")
         print()
@@ -267,7 +267,7 @@ async def run_command(args):
     is_authenticated = False
     auth_token = None
 
-    binary_path = await ensure_binary_installed()
+    await ensure_binary_installed()
 
     if not args.no_auth:
         try:
@@ -298,12 +298,7 @@ async def run_command(args):
         env['SYNVEX_AUTH_TOKEN'] = auth_token
         env['SYNVEX_SAAS_ENABLED'] = 'true'
 
-    pkg_manager = PackageManager()
-    plugin_dir = pkg_manager.get_plugin_dir()
-    if plugin_dir.exists():
-        env['NEXROO_PLUGIN_DIR'] = str(plugin_dir)
-
-    cmd = [str(binary_path), str(args.workflow)]
+    cmd = ["nexroo-engine", str(args.workflow)]
 
     if args.entrypoint:
         cmd.append(args.entrypoint)
@@ -336,11 +331,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
+    subparsers = parser.add_subparsers(
+        dest='command',
+        title='commands',
+        metavar=''
+    )
 
-    install_parser = subparsers.add_parser('install', help='Install nexroo-engine or addon packages')
-    install_parser.add_argument('package', nargs='?', help='Addon package name (e.g., openai, anthropic)')
-    install_parser.add_argument('--upgrade', action='store_true', help='Upgrade if already installed')
+    install_parser = subparsers.add_parser('install', help='Install nexroo-engine')
 
     subparsers.add_parser('login', help='Authenticate with Zitadel to access SaaS features')
     subparsers.add_parser('logout', help='Clear saved authentication credentials')
@@ -351,7 +348,11 @@ def main():
     uninstall_parser.add_argument('-y', '--yes', action='store_true', help='Skip confirmation')
 
     addon_parser = subparsers.add_parser('addon', help='Manage addon packages')
-    addon_subparsers = addon_parser.add_subparsers(dest='addon_command', help='Addon commands')
+    addon_subparsers = addon_parser.add_subparsers(
+        dest='addon_command',
+        title='addon commands',
+        metavar=''
+    )
 
     addon_list_parser = addon_subparsers.add_parser('list', help='List installed or available addons')
     addon_list_parser.add_argument('--available', action='store_true', help='List available packages')

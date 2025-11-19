@@ -4,6 +4,14 @@
 
 CLI wrapper for Nexroo workflow engine with authentication and package management.
 
+## Prerequisites
+
+**Python 3.11+** is required for addon packages to work. The engine itself is a standalone binary, but addons are installed to your system Python.
+
+- **Windows:** [Download Python](https://www.python.org/downloads/)
+- **Linux:** `apt install python3` or `yum install python3`
+- **macOS:** `brew install python3`
+
 ## Installation
 
 ### Quick Install (Recommended)
@@ -102,12 +110,54 @@ nexroo uninstall
 pip uninstall nexroo-cli
 ```
 
+## Addon Packages
+
+### Installing Addons
+
+Addons extend the engine with additional capabilities (AI providers, databases, storage, etc.).
+
+```bash
+# Install an addon
+nexroo install redis
+
+# List available addons
+nexroo addon list --available
+
+# List installed addons
+nexroo addon list
+```
+
+### Troubleshooting Addon Issues
+
+**If the engine can't find an addon:**
+
+1. Verify Python 3.11+ is installed:
+   ```bash
+   python3 --version
+   ```
+
+2. Check addon installation:
+   ```bash
+   nexroo addon list
+   python3 -m pip list | grep rooms-pkg
+   ```
+
+3. Reinstall addon:
+   ```bash
+   nexroo addon install <package> --upgrade
+   ```
+
 ## Storage Locations
 
+- Engine binary: `~/.nexroo/bin/nexroo-engine`
+- Addon packages: System Python's site-packages
 - Encrypted tokens: `~/.nexroo/auth_token.enc`
 - Encryption key: `~/.nexroo/.key`
+- Addon metadata: `~/.nexroo/installed_packages.json`
 
 ## Troubleshooting
+
+For debug use '--verbose'
 
 ### Authentication fails
 ```bash
