@@ -40,6 +40,7 @@ irm https://raw.githubusercontent.com/nexroo-ai/nexroo-cli/main/install.ps1 | ie
 
 After installation, authenticate and run your first workflow:
 
+(optionnal, for SaaS features like pulling/pushing workflows revisions)
 ```bash
 # Authenticate with Synvex
 nexroo login
@@ -57,7 +58,7 @@ nexroo run workflow.json
 nexroo login
 ```
 
-Opens browser for Zitadel authentication. Credentials stored encrypted for 30 days.
+Opens browser for Zitadel authentication.
 
 #### Logout
 ```bash
@@ -118,7 +119,7 @@ Addons extend the engine with additional capabilities (AI providers, databases, 
 
 ```bash
 # Install an addon
-nexroo install redis
+nexroo addon install redis
 
 # List available addons
 nexroo addon list --available
@@ -144,16 +145,18 @@ nexroo addon list
 
 3. Reinstall addon:
    ```bash
-   nexroo addon install <package> --upgrade
+   nexroo addon install <addon_name> --upgrade
    ```
 
 ## Storage Locations
 
-- Engine binary: `~/.nexroo/bin/nexroo-engine`
+- Engine: Installed via pip to Python's site-packages (available as `nexroo-engine` or `nexroo run`)
 - Addon packages: System Python's site-packages
 - Encrypted tokens: `~/.nexroo/auth_token.enc`
 - Encryption key: `~/.nexroo/.key`
 - Addon metadata: `~/.nexroo/installed_packages.json`
+- Engine version: `~/.nexroo/.engine_version`
+- Download cache: `~/.nexroo/cache/`
 
 ## Troubleshooting
 
@@ -173,12 +176,11 @@ nexroo login   # Re-authenticate
 
 ## Documentation
 
-See [Nexroo Documentation](https://docs.nexroo.ai) to know how to use Nexroo workflow engine.
+See [Nexroo Engine Documentation](https://docs.nexroo.ai) to know how to use Nexroo workflow engine.
 
 ## License
 
-PolyForm Noncommercial License 1.0.0 - see [LICENSE](./LICENSE) file for details.
-Or on <https://polyformproject.org/licenses/noncommercial/1.0.0>
+Nexroo Engine Free Use License v1.0 - see [LICENSE](./LICENSE) file for details.
 
 ## Support
 
