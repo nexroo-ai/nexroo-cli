@@ -42,10 +42,12 @@ After installation, authenticate and run your first workflow:
 
 (optionnal, for SaaS features like pulling/pushing workflows revisions)
 ```bash
-# Authenticate with Synvex
+# Authenticate with Nexroo
 nexroo login
+```
 
 # Run a workflow
+```bash
 nexroo run workflow.json
 ```
 

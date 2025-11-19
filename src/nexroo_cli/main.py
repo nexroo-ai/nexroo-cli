@@ -21,19 +21,9 @@ def setup_logging(verbose: bool = False):
 
 
 async def login_command():
-    try:
-        auth_manager = AuthManager()
-        result = await auth_manager.login()
-        print(f"\n✓ Successfully authenticated as {result.get('email', result.get('user_id'))}")
-        print(f"  Token expires: {result['expires_at']}")
-        print("  You can now access Synvex SaaS features\n")
-    except FileNotFoundError as e:
-        print(f"\n✗ Configuration error: {e}")
-        print("  Create .zitadel-config.json in project root or ~/.nexroo/\n")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n✗ Authentication failed: {e}\n")
-        sys.exit(1)
+    print("\nLogin feature not yet available")
+    print("  This feature will be available with the SaaS release in Q1 2026")
+    print("  Stay tuned for updates: https://www.linkedin.com/company/nexroo\n")
 
 
 async def logout_command():
