@@ -1,0 +1,26 @@
+{
+  "addons": [],
+  "entrypoints": [
+    {
+      "id": "default",
+      "name": "My First Workflow",
+      "startAt": "hello-step"
+    }
+  ],
+  "workflow": {
+    "id": "hello-workflow",
+    "name": "Hello World Workflow",
+    "version": "1.0.0",
+    "steps": [
+      {
+        "id": "hello-step",
+        "name": "Say Hello",
+        "action": "builtin::log",
+        "parameters": {
+          "message": "Hello, World!",
+          "level": "info"
+        }
+      }
+    ]
+  }
+}

@@ -1,8 +1,39 @@
 # Nexroo CLI
 
-> **📚 Full Documentation:** https://docs.nexroo.ai
+A command-line interface for running Nexroo Engine anywhere and interacting with the Nexroo SaaS automation platform.
 
-CLI wrapper for Nexroo workflow engine with authentication and package management.
+> **CLI & Engine Documentation:** [docs.nexroo.ai](https://docs.nexroo.ai)
+
+> **Website**: [nexroo.ai](https://nexroo.ai/)
+---
+
+Automate your processes, deploy micro-SaaS products, and scale seamless.
+
+Nexroo platform is divided in four components, the engine and CLI, the SaaS platform, the micro-saas package and the addons.
+
+Engine, CLI and micro-saas renderer are all free to use, all can be easily managed from our SaaS to edit with no-code editor, versionning, environments, and push multiples workflows to the deployed engine or micro-saas you are managing for your clients. 
+
+Engine Addons are open source, all viewable in nexroo-ai github repository.
+
+## Screenshots
+
+### Nexro Engine standalone usage
+Standalone engine to run in any environment, most lightweight
+![Nexroo Engine CLI screenshot](./assets/demo_cli.png)
+
+### Micro-SaaS usage
+Render and deploy micro-SaaS on-premise for your clients
+![Micro-SaaS screenshot](./assets/demo_user.png)
+
+### SaaS usage
+Manage and publish client-ready revisions (no-code)
+![SaaS screenshot](./assets/demo_editor.png)
+
+### Deploy only what your client really need, manage all from one place
+![Escalidraw Nexroo Components](./assets/nexroo_components_escalidraw.png)
+
+
+---
 
 ## Prerequisites
 
@@ -187,3 +218,13 @@ Nexroo Engine Free Use License v1.0 - see [LICENSE](./LICENSE) file for details.
 ## Support
 
 - GitHub Issues: https://github.com/nexroo-ai/nexroo-cli/issues
+
+## Contact
+
+Adrien EPPLING </br>
+mail: adrien.eppling@nexroo.ai </br>
+linkedin: https://www.linkedin.com/in/adrien-eppling/
+
+Romain MICHAUX </br>
+mail: romain.michaux@nexroo.ai </br>
+linkedin: https://www.linkedin.com/in/romain-michaux/

@@ -3,11 +3,13 @@ import os
 import asyncio
 import argparse
 import subprocess
+import shutil
 from pathlib import Path
 from loguru import logger
 from .auth.manager import AuthManager
 from .installer import BinaryInstaller
 from .package_manager import PackageManager
+from .config import Config
 
 
 def setup_logging(verbose: bool = False):
@@ -253,6 +255,44 @@ async def addon_update_command(args):
         sys.exit(1)
 
 
+def config_command(args):
+    try:
+        config = Config()
+
+        if args.config_command == 'set':
+            config.set(args.key, args.value)
+            print(f"\n✓ Set {args.key} = {args.value}\n")
+        elif args.config_command == 'get':
+            value = config.get(args.key)
+            if value is not None:
+                print(f"\n{args.key} = {value}\n")
+            else:
+                print(f"\n✗ {args.key} not set\n")
+                sys.exit(1)
+        elif args.config_command == 'delete':
+            if config.delete(args.key):
+                print(f"\n✓ Deleted {args.key}\n")
+            else:
+                print(f"\n✗ {args.key} not found\n")
+                sys.exit(1)
+        elif args.config_command == 'list':
+            cfg = config.all()
+            if cfg:
+                print("\nConfiguration:\n")
+                for key, value in cfg.items():
+                    print(f"  {key} = {value}")
+                print()
+            else:
+                print("\nNo configuration set\n")
+        else:
+            print("\nUsage: nexroo config <set|get|delete|list> [key] [value]\n")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"\nConfig operation failed: {e}\n")
+        sys.exit(1)
+
+
 async def run_command(args):
     is_authenticated = False
     auth_token = None
@@ -283,12 +323,34 @@ async def run_command(args):
         except Exception as e:
             logger.warning(f"Auth check failed: {e}")
 
+    config = Config()
+    engine_path = config.get_engine_path()
+
+    if not engine_path:
+        engine_path = shutil.which("nexroo-engine")
+
+    if not engine_path:
+        bin_dir = Path(sys.executable).parent
+        possible_path = bin_dir / "nexroo-engine"
+        if possible_path.exists():
+            engine_path = str(possible_path)
+
+    if not engine_path:
+        logger.error("nexroo-engine not found")
+        print("\nCannot find nexroo-engine binary.")
+        print("\nOptions to fix this:")
+        print("  1. Add the Python bin directory to your PATH")
+        print("  2. Set the engine path manually:")
+        print("     nexroo config set engine_path /path/to/nexroo-engine")
+        print(f"\nHint: Try looking in {bin_dir}\n")
+        sys.exit(1)
+
     env = os.environ.copy()
     if is_authenticated and auth_token:
         env['SYNVEX_AUTH_TOKEN'] = auth_token
         env['SYNVEX_SAAS_ENABLED'] = 'true'
 
-    cmd = ["nexroo-engine", str(args.workflow)]
+    cmd = [engine_path, str(args.workflow)]
 
     if args.entrypoint:
         cmd.append(args.entrypoint)
@@ -365,6 +427,25 @@ def main():
     addon_update_parser.add_argument('package', nargs='?', help='Package name (optional)')
     addon_update_parser.add_argument('--all', action='store_true', help='Update all packages')
 
+    config_parser = subparsers.add_parser('config', help='Manage CLI configuration')
+    config_subparsers = config_parser.add_subparsers(
+        dest='config_command',
+        title='config commands',
+        metavar=''
+    )
+
+    config_set_parser = config_subparsers.add_parser('set', help='Set a configuration value')
+    config_set_parser.add_argument('key', help='Configuration key')
+    config_set_parser.add_argument('value', help='Configuration value')
+
+    config_get_parser = config_subparsers.add_parser('get', help='Get a configuration value')
+    config_get_parser.add_argument('key', help='Configuration key')
+
+    config_delete_parser = config_subparsers.add_parser('delete', help='Delete a configuration value')
+    config_delete_parser.add_argument('key', help='Configuration key')
+
+    config_subparsers.add_parser('list', help='List all configuration')
+
     run_parser = subparsers.add_parser('run', help='Run a workflow')
     run_parser.add_argument('workflow', type=Path, help='Path to workflow JSON file')
     run_parser.add_argument('entrypoint', nargs='?', help='Entrypoint ID (optional)')
@@ -406,6 +487,8 @@ def main():
         else:
             addon_parser.print_help()
             sys.exit(1)
+    elif args.command == 'config':
+        config_command(args)
     elif args.command == 'run':
         asyncio.run(run_command(args))
     else:
