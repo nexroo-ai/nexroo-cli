@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.0 (2025-12-01)
+
+### Features
+
+- **docs**: Update docs & config
+  ([`1ec343b`](https://github.com/nexroo-ai/nexroo-cli/commit/1ec343b600238520fd51f4c667fda8cdc8ef0247))
+
+
 ## v1.4.0 (2025-11-19)
 
 ### Features
