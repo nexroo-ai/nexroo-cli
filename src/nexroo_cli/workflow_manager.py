@@ -182,6 +182,15 @@ class WorkflowManager:
         save_name = custom_name if custom_name else workflow_name
         workflow_path = self._get_workflow_path(save_name)
 
+        if workflow_path.exists():
+            response = input(f"\nWorkflow '{save_name}' already exists. Overwrite? (y/n): ").strip().lower()
+            if response not in ['y', 'yes']:
+                print(f"\nPull cancelled")
+                print(f"You can pull with a different name using:")
+                print(f"  nexroo workflow pull {workflow_spec} <custom-name>\n")
+                return False
+            print()
+
         try:
             workflow_path.write_text(json.dumps(workflow_data, indent=2))
             print(f"✓ Workflow saved as '{save_name}'")
