@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nexroo-cli"
-version = "1.6.0"
+version = "1.6.1"
 description = "CLI wrapper for ai-rooms-script with Zitadel authentication"
 authors = [{name = "Synvex", email = "contact@synvex.ai"}]
 readme = "README.md"
