@@ -4,12 +4,15 @@ import asyncio
 import argparse
 import subprocess
 import shutil
+import json
+import tempfile
 from pathlib import Path
 from loguru import logger
 from .auth.manager import AuthManager
 from .installer import BinaryInstaller
 from .package_manager import PackageManager
 from .config import Config
+from .workflow_manager import WorkflowManager
 
 
 def setup_logging(verbose: bool = False):
@@ -261,8 +264,16 @@ def config_command(args):
 
         if args.config_command == 'set':
             config.set(args.key, args.value)
-            print(f"\n✓ Set {args.key} = {args.value}\n")
+            if args.key == 'github_token':
+                print(f"\n✓ GitHub token has been set securely\n")
+                print(f"Note: Using {config.GITHUB_TOKEN_ENV_VAR} environment variable is recommended for better security\n")
+            else:
+                print(f"\n✓ Set {args.key} = {args.value}\n")
         elif args.config_command == 'get':
+            if args.key == 'github_token':
+                print(f"\n✗ Cannot display github_token for security reasons\n")
+                print(f"Token is read from {config.GITHUB_TOKEN_ENV_VAR} env var or config file\n")
+                sys.exit(1)
             value = config.get(args.key)
             if value is not None:
                 print(f"\n{args.key} = {value}\n")
@@ -280,7 +291,10 @@ def config_command(args):
             if cfg:
                 print("\nConfiguration:\n")
                 for key, value in cfg.items():
-                    print(f"  {key} = {value}")
+                    if key == 'github_token':
+                        print(f"  {key} = [hidden]")
+                    else:
+                        print(f"  {key} = {value}")
                 print()
             else:
                 print("\nNo configuration set\n")
@@ -290,6 +304,99 @@ def config_command(args):
 
     except Exception as e:
         print(f"\nConfig operation failed: {e}\n")
+        sys.exit(1)
+
+
+async def workflow_pull_command(args):
+    try:
+        workflow_manager = WorkflowManager()
+        success = await workflow_manager.pull(args.workflow, args.name, skip_config=args.no_config)
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"\nPull failed: {e}\n")
+        sys.exit(1)
+
+
+async def workflow_list_command(args):
+    try:
+        workflow_manager = WorkflowManager()
+
+        if args.available:
+            workflows = await workflow_manager.list_available()
+            if not workflows:
+                print("\nNo workflows found\n")
+                return
+
+            print(f"\nAvailable workflows ({len(workflows)}):\n")
+            for name in sorted(workflows):
+                print(f"  @nexroo/{name}")
+            print()
+        else:
+            workflows = workflow_manager.list_local()
+            if not workflows:
+                print("\nNo workflows installed\n")
+                print("  Run 'nexroo workflow list --available' to see available workflows")
+                print("  Run 'nexroo workflow pull @nexroo/<name>' to install\n")
+                return
+
+            print(f"\nInstalled workflows ({len(workflows)}):\n")
+            for wf in workflows:
+                print(f"  {wf['name']}")
+                print(f"    {wf['title']} v{wf['version']}")
+            print()
+
+    except Exception as e:
+        print(f"\nList failed: {e}\n")
+        sys.exit(1)
+
+
+async def workflow_config_command(args):
+    try:
+        workflow_manager = WorkflowManager()
+
+        if args.config_action == 'set':
+            success = await workflow_manager.config(args.workflow)
+        elif args.config_action == 'show':
+            success = workflow_manager.show_config(args.workflow)
+        else:
+            success = await workflow_manager.config(args.workflow)
+
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"\nConfig failed: {e}\n")
+        sys.exit(1)
+
+
+async def workflow_load_command(args):
+    try:
+        workflow_manager = WorkflowManager()
+        success = await workflow_manager.load(args.file, args.name, skip_config=args.no_config)
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        print(f"\nLoad failed: {e}\n")
+        sys.exit(1)
+
+
+async def workflow_delete_command(args):
+    try:
+        workflow_manager = WorkflowManager()
+        workflow_id = args.workflow.replace('@nexroo/', '')
+
+        if not args.yes:
+            response = input(f"Delete workflow '{workflow_id}'? [y/N]: ").strip().lower()
+            if response != 'y':
+                print("\n✗ Delete cancelled\n")
+                return
+
+        success = workflow_manager.delete(args.workflow)
+        if success:
+            print(f"\n✓ Workflow '{workflow_id}' deleted\n")
+        else:
+            print(f"\n✗ Workflow '{workflow_id}' not found\n")
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"\nDelete failed: {e}\n")
         sys.exit(1)
 
 
@@ -345,12 +452,33 @@ async def run_command(args):
         print(f"\nHint: Try looking in {bin_dir}\n")
         sys.exit(1)
 
+    workflow_path = args.workflow
+    runtime_workflow_path = None
+
+    if isinstance(args.workflow, str):
+        workflow_manager = WorkflowManager()
+        resolved_path = workflow_manager.get_workflow_path(args.workflow)
+        if resolved_path:
+            workflow_path = resolved_path
+
+            resolved_data = workflow_manager.resolve_workflow_for_runtime(workflow_path)
+            if resolved_data:
+                runtime_fd, runtime_workflow_path = tempfile.mkstemp(suffix='.json', prefix='nexroo_runtime_')
+                with os.fdopen(runtime_fd, 'w') as f:
+                    json.dump(resolved_data, f, indent=2)
+                workflow_path = runtime_workflow_path
+        elif not Path(args.workflow).exists():
+            workflow_spec = f"@nexroo/{args.workflow}" if not args.workflow.startswith('@nexroo/') else args.workflow
+            print(f"\n✗ Workflow '{args.workflow}' not found")
+            print(f"  Run 'nexroo workflow pull {workflow_spec}' to install it\n")
+            sys.exit(1)
+
     env = os.environ.copy()
     if is_authenticated and auth_token:
         env['SYNVEX_AUTH_TOKEN'] = auth_token
         env['SYNVEX_SAAS_ENABLED'] = 'true'
 
-    cmd = [engine_path, str(args.workflow)]
+    cmd = [engine_path, str(workflow_path)]
 
     if args.entrypoint:
         cmd.append(args.entrypoint)
@@ -374,6 +502,12 @@ async def run_command(args):
     except Exception as e:
         logger.error(f"Failed to run workflow: {e}")
         sys.exit(1)
+    finally:
+        if runtime_workflow_path and os.path.exists(runtime_workflow_path):
+            try:
+                os.unlink(runtime_workflow_path)
+            except:
+                pass
 
 
 def main():
@@ -446,8 +580,36 @@ def main():
 
     config_subparsers.add_parser('list', help='List all configuration')
 
+    workflow_parser = subparsers.add_parser('workflow', help='Manage workflows from GitHub repositories')
+    workflow_subparsers = workflow_parser.add_subparsers(
+        dest='workflow_command',
+        title='workflow commands',
+        metavar=''
+    )
+
+    workflow_pull_parser = workflow_subparsers.add_parser('pull', help='Pull a workflow from a GitHub repository')
+    workflow_pull_parser.add_argument('workflow', help='Workflow spec: @nexroo/name, @owner/repo:name, or @owner/repo/branch:name')
+    workflow_pull_parser.add_argument('name', nargs='?', help='Custom name for the workflow (optional)')
+    workflow_pull_parser.add_argument('--no-config', action='store_true', help='Skip configuration setup')
+
+    workflow_list_parser = workflow_subparsers.add_parser('list', help='List installed or available workflows')
+    workflow_list_parser.add_argument('--available', action='store_true', help='List available workflows from repository')
+
+    workflow_config_parser = workflow_subparsers.add_parser('config', help='Configure or show workflow configuration')
+    workflow_config_parser.add_argument('workflow', help='Workflow name (e.g., basic-rag-api)')
+    workflow_config_parser.add_argument('config_action', nargs='?', default='set', choices=['set', 'show'], help='Action: set (configure) or show (display config)')
+
+    workflow_load_parser = workflow_subparsers.add_parser('load', help='Load a workflow from a local file')
+    workflow_load_parser.add_argument('file', help='Path to workflow JSON file')
+    workflow_load_parser.add_argument('name', nargs='?', help='Custom name for the workflow (optional)')
+    workflow_load_parser.add_argument('--no-config', action='store_true', help='Skip configuration setup')
+
+    workflow_delete_parser = workflow_subparsers.add_parser('delete', help='Delete an installed workflow')
+    workflow_delete_parser.add_argument('workflow', help='Workflow name (e.g., basic-rag-api)')
+    workflow_delete_parser.add_argument('-y', '--yes', action='store_true', help='Skip confirmation')
+
     run_parser = subparsers.add_parser('run', help='Run a workflow')
-    run_parser.add_argument('workflow', type=Path, help='Path to workflow JSON file')
+    run_parser.add_argument('workflow', help='Workflow name or path to JSON file (e.g., basic-rag-api or ./workflow.json)')
     run_parser.add_argument('entrypoint', nargs='?', help='Entrypoint ID (optional)')
     run_parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose logging')
     run_parser.add_argument('--mock', action='store_true', help='Run in mock mode')
@@ -489,6 +651,20 @@ def main():
             sys.exit(1)
     elif args.command == 'config':
         config_command(args)
+    elif args.command == 'workflow':
+        if args.workflow_command == 'pull':
+            asyncio.run(workflow_pull_command(args))
+        elif args.workflow_command == 'list':
+            asyncio.run(workflow_list_command(args))
+        elif args.workflow_command == 'config':
+            asyncio.run(workflow_config_command(args))
+        elif args.workflow_command == 'load':
+            asyncio.run(workflow_load_command(args))
+        elif args.workflow_command == 'delete':
+            asyncio.run(workflow_delete_command(args))
+        else:
+            workflow_parser.print_help()
+            sys.exit(1)
     elif args.command == 'run':
         asyncio.run(run_command(args))
     else:

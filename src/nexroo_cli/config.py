@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -6,6 +7,7 @@ from typing import Optional, Dict, Any
 class Config:
     CONFIG_DIR = Path.home() / ".nexroo"
     CONFIG_FILE = CONFIG_DIR / "config.json"
+    GITHUB_TOKEN_ENV_VAR = "NEXROO_CLI_GIT_PAT"
 
     def __init__(self):
         self.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -44,3 +46,12 @@ class Config:
 
     def set_engine_path(self, path: str):
         self.set("engine_path", path)
+
+    def get_github_token(self) -> Optional[str]:
+        token = os.environ.get(self.GITHUB_TOKEN_ENV_VAR)
+        if token:
+            return token
+        return self.get("github_token")
+
+    def set_github_token(self, token: str):
+        self.set("github_token", token)

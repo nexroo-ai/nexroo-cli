@@ -107,23 +107,80 @@ nexroo status
 
 Shows authentication status and token expiration.
 
-### Running Workflows
+### Workflow Management
 
-**With authentication** (SaaS features enabled):
+#### Pull Workflow from Repository
+
 ```bash
-nexroo run workflow.json [entrypoint]
+# Pull from default Nexroo repository
+nexroo workflow pull @nexroo/workflow-name
+
+# Pull from custom repository
+nexroo workflow pull @owner/repo:workflow-name
+
+# Pull with custom name
+nexroo workflow pull @nexroo/workflow-name my-custom-name
+
+# Skip configuration during pull
+nexroo workflow pull @nexroo/workflow-name --no-config
 ```
 
-**Without authentication** (local-only mode):
+#### Load Local Workflow
+
 ```bash
+# Load workflow from local file
+nexroo workflow load ./my-workflow.json
+
+# Load with custom name
+nexroo workflow load ./my-workflow.json my-workflow
+
+# Skip configuration
+nexroo workflow load ./my-workflow.json --no-config
+```
+
+#### Configure Workflow
+
+```bash
+# Configure workflow (interactive guided process)
+nexroo workflow config set my-workflow
+
+# Show current configuration
+nexroo workflow config show my-workflow
+```
+
+#### List Workflows
+
+```bash
+# List installed workflows
+nexroo workflow list
+
+# List available workflows from repository
+nexroo workflow list --available
+```
+
+#### Delete Workflow
+
+```bash
+nexroo workflow delete my-workflow
+```
+
+### Running Workflows
+
+```bash
+# Set required environment variables for secrets
+export OPENAI_API_KEY=sk-...
+
+# Run installed workflow
+nexroo run my-workflow
+
+# Run local workflow file
+nexroo run workflow.json [entrypoint]
+
+# Without authentication (local-only mode)
 nexroo run workflow.json --no-auth
 ```
 
 ### Additional Options
-
-```bash
-nexroo run workflow.json [entrypoint] [options]
-```
 
 Refer to [Nexroo Documentation](https://docs.nexroo.ai) for all available options.
 
@@ -185,6 +242,8 @@ nexroo addon list
 
 - Engine: Installed via pip to Python's site-packages (available as `nexroo-engine` or `nexroo run`)
 - Addon packages: System Python's site-packages
+- Workflows: `~/.nexroo/workflows/`
+- Workflow configurations: `~/.nexroo/workflows/*.config.json`
 - Encrypted tokens: `~/.nexroo/auth_token.enc`
 - Encryption key: `~/.nexroo/.key`
 - Addon metadata: `~/.nexroo/installed_packages.json`
