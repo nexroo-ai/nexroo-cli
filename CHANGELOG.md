@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.0 (2025-12-04)
+
+### Features
+
+- **config**: Block conflicting pull
+  ([`67c8da1`](https://github.com/nexroo-ai/nexroo-cli/commit/67c8da18abf8a1e0dfbe5c469a038cefa5b6b86a))
+
+
 ## v1.6.1 (2025-12-04)
 
 
