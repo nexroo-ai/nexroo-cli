@@ -228,11 +228,16 @@ class WorkflowManager:
         if isinstance(obj, dict):
             if self._is_template_field(obj):
                 is_secret = obj.get('__secret', False) or self._is_secret_path(path)
+                has_default = '__default' in obj
+                if '__required' in obj:
+                    required = obj.get('__required')
+                else:
+                    required = not has_default
                 templates.append({
                     'path': path,
                     'type': obj.get('__type'),
                     'description': obj.get('__description', 'No description provided'),
-                    'required': obj.get('__required', True),
+                    'required': required,
                     'default': obj.get('__default'),
                     'is_secret': is_secret
                 })
